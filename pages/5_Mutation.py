@@ -74,7 +74,7 @@ def pair_mutation(file_path, out_format):
     shutil.rmtree(tmp_dir)
 
     # Close the progress bar
-    progress_bar.empty()
+    # progress_bar.empty()
 
     return zip_filename
 
