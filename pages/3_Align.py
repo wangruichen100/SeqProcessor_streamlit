@@ -1,6 +1,7 @@
 import subprocess
 import streamlit as st
 import os
+import tempfile
 from collections import deque
 
 # Command to perform multiple sequence alignment with MAFFT
@@ -68,24 +69,22 @@ def main():
     st.title("Multiple sequence alignment by MAFFT")
     file_path = st.file_uploader("Upload a Fasta file", type=["fasta", "fas"])
     if file_path is not None:
-        if st.button("Process"):
-            # Save uploaded file to a temporary location
-            temp_file_path = "./temp/temp_file.fasta"
-            with open(temp_file_path, "wb") as f:
-                f.write(file_path.getvalue())
+        if st.button("Run"):
+            # Create a temporary directory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Save uploaded file to a temporary location
+                temp_file_path = os.path.join(temp_dir, "temp_file.fasta")
+                with open(temp_file_path, "wb") as f:
+                    f.write(file_path.getvalue())
 
-            out_path = f"./temp/{file_path.name.split('.')[0]}_mafft.fas"
-            output_placeholder = st.empty()  # Placeholder for real-time output
-            align_mafft(temp_file_path, out_path, output_placeholder)
-            st.success("File processed successfully!")  
+                out_path = os.path.join(temp_dir, f"{file_path.name.split('.')[0]}_mafft.fas")
+                output_placeholder = st.empty()  # Placeholder for real-time output
+                align_mafft(temp_file_path, out_path, output_placeholder)
+                st.success("File processed successfully!")  
 
-            # Remove the temporary file
-            os.remove(temp_file_path)
-
-            # Download button
-            if os.path.exists(out_path):
-                st.download_button(label="Download Result", data=open(out_path, "rb"), file_name=out_path.replace("./temp/",""))
-                os.remove(out_path)
+                # Download button
+                if os.path.exists(out_path):
+                    st.download_button(label="Download Result", data=open(out_path, "rb"), file_name=out_path.replace(temp_dir + "/", ""))
 
 if __name__ == "__main__":
     main()

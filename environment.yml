@@ -135,7 +135,13 @@ dependencies:
   - zstd=1.5.5=hc292b87_2
   - pip:
       - biopython==1.83
+      - contourpy==1.2.1
+      - cycler==0.12.1
       - et-xmlfile==1.1.0
+      - fonttools==4.51.0
+      - kiwisolver==1.4.5
+      - matplotlib==3.8.4
       - openpyxl==3.1.2
+      - pyparsing==3.1.2
       - xlrd==2.0.1
 prefix: /home/wrc/miniconda3/envs/sp_web

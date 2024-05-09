@@ -3,6 +3,7 @@ import streamlit as st
 import os
 import zipfile
 from collections import deque
+import tempfile
 from utils import delete_folder_contents
 
 # Check if IQ-TREE is installed
@@ -68,31 +69,32 @@ def main():
     if file_path is not None:
         model = st.selectbox("Select model", ["MFP", "GTR", "HKY", "JC", "K80"])
         threads = st.selectbox("Select number of threads", ["AUTO", "1", "2", "4", "8"])
-        # Save uploaded file to a temporary location
-        temp_file_path = f"./temp/{file_path.name}"
-        with open(temp_file_path, "wb") as f:
-            f.write(file_path.getvalue())
+        
+        # Create a temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Save uploaded file to a temporary location
+            temp_file_path = os.path.join(temp_dir, file_path.name)
+            with open(temp_file_path, "wb") as f:
+                f.write(file_path.getvalue())
 
-        if st.button("Build Tree"):
-            output_placeholder = st.empty()  # Placeholder for real-time output
-            output_text = tree_iqtree(temp_file_path, model, threads, output_placeholder)
-            output_placeholder.text(output_text)
+            if st.button("Build Tree"):
+                output_placeholder = st.empty()  # Placeholder for real-time output
+                output_text = tree_iqtree(temp_file_path, model, threads, output_placeholder)
+                output_placeholder.text(output_text)
 
-            # Compress output files into a zip archive
-            output_dir = os.path.dirname(temp_file_path)
-            output_files = [os.path.join(output_dir, filename) for filename in os.listdir(output_dir)]
-            zip_file_path = os.path.join(output_dir, f"{file_path.name}_iqtree.zip")
-            with zipfile.ZipFile(zip_file_path, "w") as zipf:
-                for file in output_files:
-                    zipf.write(file, os.path.basename(file))
+                # Compress output files into a zip archive
+                output_files = [os.path.join(temp_dir, filename) for filename in os.listdir(temp_dir)]
+                zip_file_path = os.path.join(temp_dir, f"{file_path.name}_iqtree.zip")
+                with zipfile.ZipFile(zip_file_path, "w") as zipf:
+                    for file in output_files:
+                        zipf.write(file, os.path.basename(file))
 
-            # Download button
-            out_path = f"./temp/{file_path.name}_iqtree.zip"
-            if os.path.exists(out_path):
-                st.download_button(label="Download Result", data=open(out_path, "rb"), file_name=out_path.replace("./temp/",""))
+                # Download button
+                if os.path.exists(zip_file_path):
+                    st.download_button(label="Download Result", data=open(zip_file_path, "rb"), file_name=zip_file_path.replace(temp_dir + "/", ""))
 
     # Remove the temporary file
-    delete_folder_contents("./temp/")
+    # delete_folder_contents(temp_dir)
 
 if __name__ == "__main__":
     main()

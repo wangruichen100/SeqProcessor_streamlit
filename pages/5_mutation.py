@@ -48,16 +48,20 @@ def pair_mutation(file_path, out_format):
             if pd.isna(row[col]):
                 wide_df.at[index, col] = row['Ref seq']
     
-    out_path = os.path.dirname(file_path)
+    tmp_dir = tempfile.mkdtemp()
     if out_format == "csv":
-        df.to_csv(os.path.join(out_path, "pair_mutation_l.csv"), index=False)
-        wide_df.to_csv(os.path.join(out_path, "pair_mutation_w.csv"))
+        df.to_csv(os.path.join(tmp_dir, "pair_mutation_l.csv"), index=False)
+        wide_df.to_csv(os.path.join(tmp_dir, "pair_mutation_w.csv"))
     elif out_format == "table":
-        df.to_csv(os.path.join(out_path, "pair_mutation_l.tab"), sep="\t", index=False)
-        wide_df.to_csv(os.path.join(out_path, "pair_mutation_w.tab"), sep="\t")
+        df.to_csv(os.path.join(tmp_dir, "pair_mutation_l.tab"), sep="\t", index=False)
+        wide_df.to_csv(os.path.join(tmp_dir, "pair_mutation_w.tab"), sep="\t")
     elif out_format == "excel":
-        df.to_excel(os.path.join(out_path, "pair_mutation_l.xlsx"), index=False)
-        wide_df.to_excel(os.path.join(out_path, "pair_mutation_w.xlsx"))
+        df.to_excel(os.path.join(tmp_dir, "pair_mutation_l.xlsx"), index=False)
+        wide_df.to_excel(os.path.join(tmp_dir, "pair_mutation_w.xlsx"))
+
+    zip_filename = shutil.make_archive(tmp_dir, 'zip', tmp_dir)
+    shutil.rmtree(tmp_dir)
+    return zip_filename
 
 def find_differences(ref_seq, seq, name):
     differences = []
@@ -247,54 +251,62 @@ def nttj(input_fasta, group):
 def main():
     st.title("Mutation Analysis App")
 
+    st.header("Analysis Options")
+    analysis_type = st.radio("Select Analysis Type", ["Pair Mutation", "Group Amino Acid Mutation", "Group Nucleotide Mutation"])
+
     st.header("Upload Files")
-    fasta_file = st.file_uploader("Upload FASTA file", type=["fasta","fas"])
-    info_file = st.file_uploader("Upload Info file (Excel)", type=["xlsx"])
-
-    if fasta_file is not None and info_file is not None:
-        st.header("Analysis Options")
-        analysis_type = st.radio("Select Analysis Type", ["Pair Mutation", "Group Amino Acid Mutation", "Group Nucleotide Mutation"])
-
-        if analysis_type == "Pair Mutation":
+    
+    if analysis_type == "Pair Mutation":
+        fasta_file = st.file_uploader("Upload FASTA file", type=["fasta","fas"])
+        if fasta_file is not None:
             out_format = st.selectbox("Output Format", ["csv", "table", "excel"])
+
+    elif analysis_type == "Group Amino Acid Mutation":
+        fasta_file = st.file_uploader("Upload FASTA file", type=["fasta","fas"])
+        info_file = st.file_uploader("Upload Info file (Excel)", type=["xlsx"])
+        if fasta_file is not None and info_file is not None:
+            # 获取上传的文件的列名
+            column_names = get_column_names(info_file, "xlsx")
+            id_column = st.selectbox("ID Column Name", column_names)
+            type_column = st.selectbox("Type Column Name", column_names)
+            picture_type = st.selectbox("Picture Type", ["bar", "line"])
+
+    elif analysis_type == "Group Nucleotide Mutation":
+        fasta_file = st.file_uploader("Upload FASTA file", type=["fasta","fas"])
+        info_file = st.file_uploader("Upload Info file (Excel)", type=["xlsx"])
+        if fasta_file is not None and info_file is not None:
+        # 获取上传的文件的列名
+            column_names = get_column_names(info_file, "xlsx")
+            id_column = st.selectbox("ID Column Name", column_names)
+            type_column = st.selectbox("Type Column Name", column_names)
+            picture_type = st.selectbox("Picture Type", ["bar", "line"])
+
+    if st.button("Run"):
+        if analysis_type == "Pair Mutation":
+            # 将上传的文件对象转换为文件路径
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_fasta:
+                tmp_fasta.write(fasta_file.read())
+                tmp_fasta_path = tmp_fasta.name
+            zip_filename = pair_mutation(tmp_fasta_path, out_format)
+            
         elif analysis_type == "Group Amino Acid Mutation":
-            # 获取上传的文件的列名
-            column_names = get_column_names(info_file, "xlsx")
-            id_column = st.selectbox("ID Column Name", column_names)
-            type_column = st.selectbox("Type Column Name", column_names)
-            picture_type = st.selectbox("Picture Type", ["bar", "line"])
+            # 将上传的文件对象转换为文件路径
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_fasta:
+                tmp_fasta.write(fasta_file.read())
+                tmp_fasta_path = tmp_fasta.name
+            zip_filename = group_aamutation(tmp_fasta_path, info_file, id_column, type_column, picture_type)
         elif analysis_type == "Group Nucleotide Mutation":
-            # 获取上传的文件的列名
-            column_names = get_column_names(info_file, "xlsx")
-            id_column = st.selectbox("ID Column Name", column_names)
-            type_column = st.selectbox("Type Column Name", column_names)
-            picture_type = st.selectbox("Picture Type", ["bar", "line"])
+            # 将上传的文件对象转换为文件路径
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_fasta:
+                tmp_fasta.write(fasta_file.read())
+                tmp_fasta_path = tmp_fasta.name
+            zip_filename = group_ntmutation(tmp_fasta_path, info_file, id_column, type_column, picture_type)
 
-        if st.button("Run"):
-            if analysis_type == "Pair Mutation":
-                # 将上传的文件对象转换为文件路径
-                with tempfile.NamedTemporaryFile(delete=False) as tmp_fasta:
-                    tmp_fasta.write(fasta_file.read())
-                    tmp_fasta_path = tmp_fasta.name
-                pair_mutation(tmp_fasta_path, out_format)
-            elif analysis_type == "Group Amino Acid Mutation":
-                # 将上传的文件对象转换为文件路径
-                with tempfile.NamedTemporaryFile(delete=False) as tmp_fasta:
-                    tmp_fasta.write(fasta_file.read())
-                    tmp_fasta_path = tmp_fasta.name
-                zip_filename = group_aamutation(tmp_fasta_path, info_file, id_column, type_column, picture_type)
-            elif analysis_type == "Group Nucleotide Mutation":
-                # 将上传的文件对象转换为文件路径
-                with tempfile.NamedTemporaryFile(delete=False) as tmp_fasta:
-                    tmp_fasta.write(fasta_file.read())
-                    tmp_fasta_path = tmp_fasta.name
-                zip_filename = group_ntmutation(tmp_fasta_path, info_file, id_column, type_column, picture_type)
-
-            # 提示处理完成
-            st.success("Analysis completed successfully. Please download the output zip file.")
-            with open(zip_filename, 'rb') as f:
-                bytes_data = f.read()
-                st.download_button(label="Download Output", data=bytes_data, file_name="output.zip")
+        # 提示处理完成
+        st.success("Analysis completed successfully. Please download the output zip file.")
+        with open(zip_filename, 'rb') as f:
+            bytes_data = f.read()
+            st.download_button(label="Download Output", data=bytes_data, file_name="output.zip")
 
 # Run the Streamlit app
 if __name__ == "__main__":
