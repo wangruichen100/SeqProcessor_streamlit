@@ -30,7 +30,18 @@ def pair_mutation(file_path, out_format):
     ref_sequence = sequences[0]
 
     all_differences = []
-    for name, sequence in zip(names[1:], sequences[1:]):
+    total_sequences = len(names) - 1  # Total sequences excluding the reference sequence
+
+    # Create a progress bar widget
+    progress_bar = st.progress(0)
+
+    for idx, (name, sequence) in enumerate(zip(names[1:], sequences[1:]), 1):
+        # Calculate progress percentage
+        progress_percent = idx / total_sequences
+
+        # Update the progress bar
+        progress_bar.progress(int(progress_percent * 100))
+
         differences = find_differences(ref_sequence, sequence, name)
         all_differences.extend(differences)
     
@@ -61,6 +72,10 @@ def pair_mutation(file_path, out_format):
 
     zip_filename = shutil.make_archive(tmp_dir, 'zip', tmp_dir)
     shutil.rmtree(tmp_dir)
+
+    # Close the progress bar
+    progress_bar.empty()
+
     return zip_filename
 
 def find_differences(ref_seq, seq, name):
