@@ -5,6 +5,7 @@ import pandas as pd
 from Bio import SeqIO
 from collections import Counter
 from enum import Enum
+import tempfile
 
 # 导入要用于处理的函数
 from utils import fasta_read, fasta_read2
@@ -36,11 +37,12 @@ def name_change(file_path, info_path, info_format):
     new_name = df_info.iloc[:, 1].to_list()
     name_dict = dict(zip(old_name,new_name))
     
-    out_path = "./temp/processed.fasta"
-    with open(out_path, 'w') as outfile:
-        for name, sequence in zip(names, sequences):
-            name_ = name_dict[name]
-            outfile.write(f'>{name_}\n{sequence}\n')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for name, sequence in zip(names, sequences):
+                name_ = name_dict.get(name, name)
+                f.write(f'>{name_}\n{sequence}\n')
 
     return out_path
 
@@ -81,10 +83,11 @@ def id_duplicate(file_path, delete_format):
     names, sequences = fasta_read2(file_path)
     names, sequences = handle_duplicate_ids(names, sequences, delete_format)
 
-    out_path = "./temp/processed.fasta"
-    with open(out_path, "w") as outfile:
-        for name, sequence in zip(names, sequences):
-            outfile.write(f">{name}\n{sequence}\n")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, "w") as f:
+            for name, sequence in zip(names, sequences):
+                f.write(f">{name}\n{sequence}\n")
     return out_path
 
 # 处理序列中的字符
@@ -107,10 +110,11 @@ def seq_standardize(file_path, standardize_format):
 
         records.append({"Name": name, "Sequence": seq})
 
-    out_path = "./temp/processed.fasta"
-    with open(out_path, 'w') as outfile:
-        for record in records:
-            outfile.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for record in records:
+                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
     return out_path
 
 # 转换序列的大小写
@@ -129,25 +133,27 @@ def seq_case(file_path, case_format):
 
         records.append({"Name": name, "Sequence": seq})
 
-    out_path = "./temp/processed.fasta"
-    with open(out_path, 'w') as outfile:
-        for record in records:
-            outfile.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for record in records:
+                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
     return out_path
 
 # 过滤低质量序列
 def quality_control(file_path, qc_percentage):
     names, sequences = fasta_read2(file_path)
 
-    out_path = "./temp/processed.fasta"
-    with open(out_path, 'w') as outfile:
-        for name, sequence in zip(names, sequences):
-            sequence = sequence.upper()
-            seq_length = len(sequence)
-            seq_count = Counter(sequence)
-            atcg_count = seq_count["A"]+seq_count["T"]+seq_count["C"]+seq_count["G"]
-            if atcg_count/seq_length >= qc_percentage:
-                outfile.write(f'>{name}\n{sequence}\n')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for name, sequence in zip(names, sequences):
+                sequence = sequence.upper()
+                seq_length = len(sequence)
+                seq_count = Counter(sequence)
+                atcg_count = seq_count["A"]+seq_count["T"]+seq_count["C"]+seq_count["G"]
+                if atcg_count/seq_length >= qc_percentage:
+                    f.write(f'>{name}\n{sequence}\n')
     return out_path
 
 # 创建 Streamlit 应用程序
@@ -155,7 +161,7 @@ def process_and_download(file_path, process_function):
     if file_path:
         if st.button("Process"):
             # Save uploaded file to a temporary location
-            temp_file_path = "./temp/temp_file.fasta"
+            temp_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".fasta").name
             with open(temp_file_path, "wb") as f:
                 f.write(file_path.getvalue())
             
@@ -176,11 +182,11 @@ def process_and_download2(file_path, info_path, info_format):
     if file_path and info_path:
         if st.button("Process"):
             # Save uploaded file to a temporary location
-            temp_fas_file_path = "./temp/temp_file.fasta"
+            temp_fas_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".fasta").name
             with open(temp_fas_file_path, "wb") as f:
                 f.write(file_path.getvalue())
 
-            temp_info_file_path = "./temp/temp_file.csv"
+            temp_info_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".csv").name
             if info_format == "csv":
                 df = pd.read_csv(info_path)
                 df.to_csv(temp_info_file_path, index=False)
@@ -198,7 +204,7 @@ def process_and_download2(file_path, info_path, info_format):
             st.download_button(
                 label="Download Processed File",
                 data=processed_content,
-                file_name=os.path.basename(out_file_path),
+                file_name="processed.fas",
                 mime="application/octet-stream"
             )
             os.remove(temp_fas_file_path)

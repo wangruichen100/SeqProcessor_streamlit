@@ -1,5 +1,8 @@
 import os
-
+import numpy as np
+from Bio.Seq import Seq
+import matplotlib.cm as cm
+from matplotlib.colors import ListedColormap
 
 def fasta_read(file_path):
     sequences = {}
@@ -57,5 +60,62 @@ def delete_folder_contents(folder_path):
     except Exception as e:
         print(f"Error deleting contents of folder {folder_path}: {e}")
 
-# 调用函数并传入要删除的文件夹路径
-delete_folder_contents('/path/to/folder')
+def translate_dna_to_protein(dna_sequence, codon_table):
+    # Create a Seq object from the DNA sequence
+    dna_seq = Seq(dna_sequence)
+    
+    # Translate the DNA sequence to protein sequence using the specified codon table
+    protein_seq = dna_seq.translate(table=codon_table)
+    
+    return protein_seq
+
+def translate_sequence(nucleotide_sequence):
+    codon_table = {
+        "TTT": "F", "TTC": "F", "TTA": "L", "TTG": "L",
+        "CTT": "L", "CTC": "L", "CTA": "L", "CTG": "L",
+        "ATT": "I", "ATC": "I", "ATA": "I", "ATG": "M",
+        "GTT": "V", "GTC": "V", "GTA": "V", "GTG": "V",
+        "TCT": "S", "TCC": "S", "TCA": "S", "TCG": "S",
+        "CCT": "P", "CCC": "P", "CCA": "P", "CCG": "P",
+        "ACT": "T", "ACC": "T", "ACA": "T", "ACG": "T",
+        "GCT": "A", "GCC": "A", "GCA": "A", "GCG": "A",
+        "TAT": "Y", "TAC": "Y", "TAA": "*", "TAG": "*",
+        "CAT": "H", "CAC": "H", "CAA": "Q", "CAG": "Q",
+        "AAT": "N", "AAC": "N", "AAA": "K", "AAG": "K",
+        "GAT": "D", "GAC": "D", "GAA": "E", "GAG": "E",
+        "TGT": "C", "TGC": "C", "TGA": "*", "TGG": "W",
+        "CGT": "R", "CGC": "R", "CGA": "R", "CGG": "R",
+        "AGT": "S", "AGC": "S", "AGA": "R", "AGG": "R",
+        "GGT": "G", "GGC": "G", "GGA": "G", "GGG": "G"
+    }
+    
+    nucleotide_sequence = nucleotide_sequence.upper()
+    protein_sequence = ""
+    for i in range(0, len(nucleotide_sequence), 3):
+        codon = nucleotide_sequence[i:i+3]
+        if codon in codon_table:
+            protein_sequence += codon_table[codon]
+        else:
+            protein_sequence += "?"
+    return protein_sequence
+
+
+def tab21_black():
+    # Get tab20 colormap
+    tab20 = cm.get_cmap('tab20')
+
+    tab20_black = tab20(np.linspace(0, 1, 20))
+    tab20_black = np.vstack(([0, 0, 0, 1],tab20_black))  # [0, 0, 0] represents black color
+    # Create colormap with black color added
+    colormap = ListedColormap(tab20_black)
+    return colormap
+
+def dark2_black():
+    # Get Dark2 colormap
+    dark2 = cm.get_cmap('Dark2')
+
+    dark2_black = dark2(np.linspace(0, 1, 8))
+    dark2_black = np.vstack(([0, 0, 0, 1],dark2_black))  # [0, 0, 0] represents black color
+    # Create colormap with black color added
+    colormap = ListedColormap(dark2_black)
+    return colormap
