@@ -41,7 +41,7 @@ def main():
         out_extension = "xlsx"
 
     if file_path is not None:
-        if st.button("Process"):
+        if st.button("Run"):
             df = genbank_profile(file_path)
             st.write(df)
             st.success("File processed successfully!")

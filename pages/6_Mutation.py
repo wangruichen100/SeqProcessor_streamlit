@@ -14,7 +14,6 @@ import numpy as np
 from utils import fasta_read, fasta_read2, tab21_black, get_column_names
 
 
-
 def pair_mutation(file_path, out_format):
     names, sequences = fasta_read2(file_path)
     ref_sequence = sequences[0]

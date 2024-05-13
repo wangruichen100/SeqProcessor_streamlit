@@ -2,7 +2,6 @@ import os
 import io
 import streamlit as st
 import pandas as pd
-from Bio import SeqIO
 from collections import Counter
 from enum import Enum
 import tempfile

@@ -1,4 +1,6 @@
 import os
+import tempfile
+import streamlit as st
 import numpy as np
 import pandas as pd
 from Bio.Seq import Seq
@@ -135,7 +137,7 @@ def get_column_names(file_path, file_format):
 
 def process_and_download(file_path, process_function, output_filename):
     if file_path:
-        if st.button("Process"):
+        if st.button("Run"):
             # Save uploaded file to a temporary location
             temp_file_path = tempfile.NamedTemporaryFile(delete=True, suffix=".fasta").name
             with open(temp_file_path, "wb") as f:
@@ -156,7 +158,7 @@ def process_and_download(file_path, process_function, output_filename):
 
 def process_and_download2(file_path, info_path, process_function, output_filename):
     if file_path and info_path:
-        if st.button("Process"):
+        if st.button("Run"):
             # Save uploaded file to a temporary location
             temp_fas_file_path = tempfile.NamedTemporaryFile(delete=True, suffix=".fasta").name
             with open(temp_fas_file_path, "wb") as f:
