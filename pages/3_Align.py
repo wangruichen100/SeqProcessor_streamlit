@@ -84,7 +84,7 @@ def main():
 
                 # Download button
                 if os.path.exists(out_path):
-                    st.download_button(label="Download Result", data=open(out_path, "rb"), file_name=out_path.replace(temp_dir + "/", ""))
+                    st.download_button(label="Download Output", data=open(out_path, "rb"), file_name=out_path.replace(temp_dir + "/", ""))
 
 if __name__ == "__main__":
     main()

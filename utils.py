@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 from Bio.Seq import Seq
 import matplotlib.cm as cm
 from matplotlib.colors import ListedColormap
@@ -119,3 +120,15 @@ def dark2_black():
     # Create colormap with black color added
     colormap = ListedColormap(dark2_black)
     return colormap
+
+def get_column_names(file_path, file_format):
+    if file_format == "xlsx":
+        df = pd.read_excel(file_path, engine='openpyxl')
+    elif file_format == "csv":
+        df = pd.read_csv(file_path)
+    elif file_format == "table" or file_format == "txt":
+        df = pd.read_csv(file_path, sep="\t")
+    else:
+        raise ValueError("Unsupported file format")
+
+    return df.columns.tolist()

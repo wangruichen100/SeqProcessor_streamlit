@@ -8,9 +8,50 @@ from enum import Enum
 import tempfile
 
 # 导入要用于处理的函数
-from utils import fasta_read, fasta_read2
+from utils import fasta_read, fasta_read2, get_column_names
+
+# 长度过滤
+def seq_length(file_path, min_length, max_length):
+    sequences = fasta_read(file_path)
+    records = []
+
+    for name, seq in sequences.items():
+        seq = seq.upper()
+        if len(seq) > min_length and len(seq) < max_length:
+
+            records.append({"Name": name, "Sequence": seq})
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for record in records:
+                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
+    return out_path
+
+# 提取序列
+def extract_sequence(file_path, info_path):
+
+    sequences = fasta_read(file_path)
+    df_info = pd.read_csv(info_path)
+    require_id = df_info.iloc[:, 0].to_list()  # 加上括号
+
+    records = []
+
+    for name, seq in sequences.items():
+        seq = seq.upper()
+        for id_ in require_id:
+            if id_ in name:
+                records.append({"Name": name, "Sequence": seq})
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for record in records:
+                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
+    return out_path
 
 
+# 名字转变
 def name_change(file_path, info_path):
     """
     Replace sequence names according to the corresponding table.
@@ -165,7 +206,7 @@ def process_and_download(file_path, process_function, output_filename):
             with open(out_file_path, "r") as f:
                 processed_content = f.read()
             st.download_button(
-                label="Download Processed File",
+                label="Download Output",
                 data=processed_content,
                 file_name=output_filename,  # Use the defined output filename here
                 mime="application/octet-stream"
@@ -173,7 +214,7 @@ def process_and_download(file_path, process_function, output_filename):
             os.remove(out_file_path)
             os.remove(temp_file_path)
 
-def process_and_download2(file_path, info_path, output_filename):
+def process_and_download2(file_path, info_path, process_function, output_filename):
     if file_path and info_path:
         if st.button("Process"):
             # Save uploaded file to a temporary location
@@ -194,12 +235,12 @@ def process_and_download2(file_path, info_path, output_filename):
                 df = pd.read_excel(info_path, engine='openpyxl')
                 df.to_csv(temp_info_file_path, index=False)
 
-            out_file_path = name_change(temp_fas_file_path, temp_info_file_path)
+            out_file_path = process_function(temp_fas_file_path, temp_info_file_path)
             st.success("File processed successfully!")
             with open(out_file_path, "r") as f:
                 processed_content = f.read()
             st.download_button(
-                label="Download Processed File",
+                label="Download Output",
                 data=processed_content,
                 file_name=output_filename,  # Use the defined output filename here
                 mime="application/octet-stream"
@@ -210,34 +251,52 @@ def main():
     st.title("Sequence Pretreatment")
 
     # 创建顶部选项
-    selected_option = st.radio("Select an option", ["Replace sequence names", "Handle Duplicate IDs", "Process Sequence Characters", "Convert Sequence Case", "Quality Control"])
+    selected_option = st.radio("Select an option", ["Filtered by length", 
+                                                    "Extract sequence by id",
+                                                    "Replace sequence id", 
+                                                    "Handle duplicate IDs", 
+                                                    "Process sequence characters", 
+                                                    "Convert sequence case", 
+                                                    "Quality control"])
 
-    if selected_option == "Replace sequence names":
-        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas"])
-        info_path = st.file_uploader("Upload an Info file", type=["csv", "table", "xlsx"])
-        process_and_download2(file_path, info_path, "renamed_sequences.fasta")  # Define the output filename here
+    if selected_option == "Filtered by length":
+        min_length = st.number_input("Min length", step = 1)
+        max_length = st.number_input("Max length", step = 1)
+        file_path = st.file_uploader("Upload a Fasta file", type=["fasta", "fas", "fa"])
+        process_and_download(file_path, lambda x: seq_length(x, min_length, max_length), "length_filtered.fasta")  # Define the output filename here
 
-    elif selected_option == "Handle Duplicate IDs":
+    elif selected_option == "Extract sequence by id":
+        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
+        info_path = st.file_uploader("Upload an Info file", type=["csv", "table", "txt", "xlsx"])
+        
+        process_and_download2(file_path, info_path, lambda x, y: extract_sequence(x, y), "require_seq.fasta")  # Define the output filename here
+
+    elif selected_option == "Replace sequence id":
+        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
+        info_path = st.file_uploader("Upload an Info file", type=["csv", "table", "txt", "xlsx"])
+        process_and_download2(file_path, info_path, lambda x, y: name_change(x, y), "renamed_sequences.fasta")  # Define the output filename here
+
+    elif selected_option == "Handle duplicate IDs":
         delete_format = st.selectbox("Delete Duplicate Format", ["rename","delete"])
 
-        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas"])
+        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
         process_and_download(file_path, lambda x: id_duplicate(x, delete_format), "handled_duplicate_ids.fasta")  # Define the output filename here
 
-    elif selected_option == "Process Sequence Characters":
+    elif selected_option == "Process sequence characters":
         standardize_format = st.selectbox("Standardize Format", ["Delete", "Replace to \"N\"", "Replace to \"-\""])
 
-        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas"])
+        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
         process_and_download(file_path, lambda x: seq_standardize(x, standardize_format), "standardized_sequences.fasta")  # Define the output filename here
 
-    elif selected_option == "Convert Sequence Case":
+    elif selected_option == "Convert sequence case":
         case_format = st.selectbox("Case Format", ["upper", "lower"])
 
-        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas"])
+        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
         process_and_download(file_path, lambda x: seq_case(x, case_format), "converted_case_sequences.fasta")  # Define the output filename here
 
-    elif selected_option == "Quality Control":
+    elif selected_option == "Quality control":
         qc_percentage = st.slider("QC Percentage", min_value=0.0, max_value=1.0, step=0.01)
-        file_path = st.file_uploader("Upload a Fasta file", type=["fasta", "fas"])
+        file_path = st.file_uploader("Upload a Fasta file", type=["fasta", "fas", "fa"])
         process_and_download(file_path, lambda x: quality_control(x, qc_percentage), "quality_controlled_sequences.fasta")  # Define the output filename here
 
 if __name__ == "__main__":

@@ -11,19 +11,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import fasta_read, fasta_read2, tab21_black
+from utils import fasta_read, fasta_read2, tab21_black, get_column_names
 
-def get_column_names(file_path, file_format):
-    if file_format == "xlsx":
-        df = pd.read_excel(file_path)
-    elif file_format == "csv":
-        df = pd.read_csv(file_path)
-    elif file_format == "table":
-        df = pd.read_csv(file_path, sep="\t")
-    else:
-        raise ValueError("Unsupported file format")
 
-    return df.columns.tolist()
 
 def pair_mutation(file_path, out_format):
     names, sequences = fasta_read2(file_path)

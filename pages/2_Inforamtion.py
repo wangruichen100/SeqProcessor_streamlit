@@ -57,7 +57,7 @@ def main():
                 df.to_excel(output, index=False)
             output.seek(0)
             st.download_button(
-                label="Click to download",
+                label="Download Output",
                 data=output,
                 file_name=output_filename,
                 mime="application/octet-stream"
