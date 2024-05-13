@@ -132,3 +132,57 @@ def get_column_names(file_path, file_format):
         raise ValueError("Unsupported file format")
 
     return df.columns.tolist()
+
+def process_and_download(file_path, process_function, output_filename):
+    if file_path:
+        if st.button("Process"):
+            # Save uploaded file to a temporary location
+            temp_file_path = tempfile.NamedTemporaryFile(delete=True, suffix=".fasta").name
+            with open(temp_file_path, "wb") as f:
+                f.write(file_path.getvalue())
+            
+            out_file_path = process_function(temp_file_path)
+            st.success("File processed successfully!")
+            with open(out_file_path, "r") as f:
+                processed_content = f.read()
+            st.download_button(
+                label="Download Output",
+                data=processed_content,
+                file_name=output_filename,  # Use the defined output filename here
+                mime="application/octet-stream"
+            )
+            os.remove(out_file_path)
+            os.remove(temp_file_path)
+
+def process_and_download2(file_path, info_path, process_function, output_filename):
+    if file_path and info_path:
+        if st.button("Process"):
+            # Save uploaded file to a temporary location
+            temp_fas_file_path = tempfile.NamedTemporaryFile(delete=True, suffix=".fasta").name
+            with open(temp_fas_file_path, "wb") as f:
+                f.write(file_path.getvalue())
+
+            # Determine the format of the info file based on its extension
+            info_format = info_path.name.split(".")[-1]
+            temp_info_file_path = tempfile.NamedTemporaryFile(delete=True).name
+            if info_format == "csv":
+                df = pd.read_csv(info_path)
+                df.to_csv(temp_info_file_path, index=False)
+            elif info_format == "txt" or info_format == "tsv" or info_format == "tab":
+                df = pd.read_csv(info_path, sep="\t")
+                df.to_csv(temp_info_file_path, index=False)
+            elif info_format == "xlsx":
+                df = pd.read_excel(info_path, engine='openpyxl')
+                df.to_csv(temp_info_file_path, index=False)
+
+            out_file_path = process_function(temp_fas_file_path, temp_info_file_path)
+            st.success("File processed successfully!")
+            with open(out_file_path, "r") as f:
+                processed_content = f.read()
+            st.download_button(
+                label="Download Output",
+                data=processed_content,
+                file_name=output_filename,  # Use the defined output filename here
+                mime="application/octet-stream"
+            )
+

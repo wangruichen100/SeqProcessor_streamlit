@@ -8,7 +8,7 @@ from enum import Enum
 import tempfile
 
 # 导入要用于处理的函数
-from utils import fasta_read, fasta_read2, get_column_names
+from utils import fasta_read, fasta_read2, get_column_names, process_and_download, process_and_download2
 
 # 长度过滤
 def seq_length(file_path, min_length, max_length):
@@ -20,28 +20,6 @@ def seq_length(file_path, min_length, max_length):
         if len(seq) > min_length and len(seq) < max_length:
 
             records.append({"Name": name, "Sequence": seq})
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
-        out_path = outfile.name
-        with open(out_path, 'w') as f:
-            for record in records:
-                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
-    return out_path
-
-# 提取序列
-def extract_sequence(file_path, info_path):
-
-    sequences = fasta_read(file_path)
-    df_info = pd.read_csv(info_path)
-    require_id = df_info.iloc[:, 0].to_list()  # 加上括号
-
-    records = []
-
-    for name, seq in sequences.items():
-        seq = seq.upper()
-        for id_ in require_id:
-            if id_ in name:
-                records.append({"Name": name, "Sequence": seq})
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
         out_path = outfile.name
@@ -192,67 +170,13 @@ def quality_control(file_path, qc_percentage):
                     f.write(f'>{name}\n{sequence}\n')
     return out_path
 
+
 # 创建 Streamlit 应用程序
-def process_and_download(file_path, process_function, output_filename):
-    if file_path:
-        if st.button("Process"):
-            # Save uploaded file to a temporary location
-            temp_file_path = tempfile.NamedTemporaryFile(delete=True, suffix=".fasta").name
-            with open(temp_file_path, "wb") as f:
-                f.write(file_path.getvalue())
-            
-            out_file_path = process_function(temp_file_path)
-            st.success("File processed successfully!")
-            with open(out_file_path, "r") as f:
-                processed_content = f.read()
-            st.download_button(
-                label="Download Output",
-                data=processed_content,
-                file_name=output_filename,  # Use the defined output filename here
-                mime="application/octet-stream"
-            )
-            os.remove(out_file_path)
-            os.remove(temp_file_path)
-
-def process_and_download2(file_path, info_path, process_function, output_filename):
-    if file_path and info_path:
-        if st.button("Process"):
-            # Save uploaded file to a temporary location
-            temp_fas_file_path = tempfile.NamedTemporaryFile(delete=True, suffix=".fasta").name
-            with open(temp_fas_file_path, "wb") as f:
-                f.write(file_path.getvalue())
-
-            # Determine the format of the info file based on its extension
-            info_format = info_path.name.split(".")[-1]
-            temp_info_file_path = tempfile.NamedTemporaryFile(delete=True).name
-            if info_format == "csv":
-                df = pd.read_csv(info_path)
-                df.to_csv(temp_info_file_path, index=False)
-            elif info_format == "txt" or info_format == "tsv" or info_format == "tab":
-                df = pd.read_csv(info_path, sep="\t")
-                df.to_csv(temp_info_file_path, index=False)
-            elif info_format == "xlsx":
-                df = pd.read_excel(info_path, engine='openpyxl')
-                df.to_csv(temp_info_file_path, index=False)
-
-            out_file_path = process_function(temp_fas_file_path, temp_info_file_path)
-            st.success("File processed successfully!")
-            with open(out_file_path, "r") as f:
-                processed_content = f.read()
-            st.download_button(
-                label="Download Output",
-                data=processed_content,
-                file_name=output_filename,  # Use the defined output filename here
-                mime="application/octet-stream"
-            )
-
-
 def main():
     st.title("Sequence Pretreatment")
 
     # 创建顶部选项
     selected_option = st.radio("Select an option", ["Filtered by length", 
-                                                    "Extract sequence by id",
                                                     "Replace sequence id", 
                                                     "Handle duplicate IDs", 
                                                     "Process sequence characters", 
@@ -264,12 +188,6 @@ def main():
         max_length = st.number_input("Max length", step = 1)
         file_path = st.file_uploader("Upload a Fasta file", type=["fasta", "fas", "fa"])
         process_and_download(file_path, lambda x: seq_length(x, min_length, max_length), "length_filtered.fasta")  # Define the output filename here
-
-    elif selected_option == "Extract sequence by id":
-        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
-        info_path = st.file_uploader("Upload an Info file", type=["csv", "table", "txt", "xlsx"])
-        
-        process_and_download2(file_path, info_path, lambda x, y: extract_sequence(x, y), "require_seq.fasta")  # Define the output filename here
 
     elif selected_option == "Replace sequence id":
         file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
