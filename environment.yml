@@ -129,6 +129,7 @@ dependencies:
   - utf8proc=2.6.1=h5eee18b_1
   - watchdog=2.1.6=py312h06a4308_0
   - wheel=0.43.0=py312h06a4308_0
+  - xlsxwriter=3.1.1=py312h06a4308_0
   - xz=5.4.6=h5eee18b_1
   - yaml=0.2.5=h7b6447c_0
   - zlib=1.2.13=h5eee18b_1
