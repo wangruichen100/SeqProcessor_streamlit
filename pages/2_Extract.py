@@ -7,7 +7,7 @@ import random
 import shutil
 
 # 导入要用于处理的函数
-from utils import fasta_read, process_and_download2, get_column_names
+from utils import fasta_read, fasta_read2, get_column_names
 
 def extract_sequence(file_path, info_path):
     """
@@ -113,6 +113,37 @@ def group_sequence(file_path, info_path, id_column, type_column):
     shutil.rmtree(output_folder)
     return zip_filename
 
+
+def extract_gene(file_path, info_path, gene_column, start_column, end_column):
+    names, sequences = fasta_read2(file_path)
+    # Read the gene information from the Excel file
+    df = pd.read_excel(info_path)
+    genes = df[gene_column].to_list()
+    starts = df[start_column].to_list()
+    ends = df[end_column].to_list()
+
+    output_folder = tempfile.mkdtemp()
+
+    # Iterate over each gene, start, and end position
+    for gene, start, end in zip(genes, starts, ends):
+        print(gene)
+
+        if start > end:
+            start, end = end, start
+        # Open the output file for the current gene
+        batch_filename = os.path.join(output_folder, f"{gene}.fasta")
+        with open(batch_filename, "w") as f:
+            # Read sequences from the FASTA file
+            for name, seq in zip(names, sequences):
+                # Extract the subsequence from start to end (1-based indexing)
+                subsequence = seq[start-1:end]
+                # Write the subsequence to the output file
+                f.write(f">{name}\n{subsequence}\n")
+
+    zip_filename = shutil.make_archive(output_folder, 'zip', output_folder)
+    shutil.rmtree(output_folder)
+    return zip_filename
+
 def split_fasta(file_path, sequences_per_file):
     """
     Split a FASTA file into multiple files, each containing a specified number of sequences.
@@ -139,6 +170,7 @@ def split_fasta(file_path, sequences_per_file):
     shutil.rmtree(output_folder)
     return zip_filename
 
+
 def main():
     """
     Main function to run the Streamlit app for sequence extraction.
@@ -149,6 +181,7 @@ def main():
                                                     "Extract sequence by random rate",
                                                     "Extract sequence by random number",
                                                     "Extract sequence by group",
+                                                    "Extract sequence by gene site",
                                                     "Split FASTA file into multiple files"])
     
     if selected_option == "Extract sequence by id":
@@ -242,6 +275,29 @@ def main():
                     data=bytes_data,
                     file_name="output.zip"
                 )
+
+    elif selected_option == "Extract sequence by gene site":
+        fasta_file = st.file_uploader("Upload FASTA file", type=["fasta", "fas", "fa"])
+        info_file = st.file_uploader("Upload Info file (Excel)", type=["xlsx"])
+        
+        if fasta_file and info_file:
+            column_names = get_column_names(info_file, "xlsx")
+            gene_column = st.selectbox("Gene Column Name", column_names)
+            start_column = st.selectbox("Start Column Name", column_names)
+            end_column = st.selectbox("End Column Name", column_names)
+            
+            if st.button("Run"):
+                with tempfile.NamedTemporaryFile(delete=False) as tmp_fasta:
+                    tmp_fasta.write(fasta_file.read())
+                    tmp_fasta_path = tmp_fasta.name
+                zip_filename = extract_gene(tmp_fasta_path, info_file, gene_column, start_column, end_column)
+                st.success("File processed successfully!")
+                with open(zip_filename, 'rb') as f:
+                    bytes_data = f.read()
+                st.download_button(
+                    label="Download Output",
+                    data=bytes_data,
+                    file_name="output.zip")
 
     elif selected_option == "Split FASTA file into multiple files":
         file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])

@@ -5,9 +5,10 @@ import pandas as pd
 from collections import Counter
 from enum import Enum
 import tempfile
+from collections import defaultdict
 
 # 导入要用于处理的函数
-from utils import fasta_read, fasta_read2, get_column_names, process_and_download, process_and_download2
+from utils import fasta_read, fasta_read2, fasta_read3, process_and_download, process_and_download2, get_column_names
 
 def seq_length(file_path, min_length, max_length):
     """
@@ -209,6 +210,79 @@ def quality_control(file_path, qc_percentage):
                     f.write(f'>{name}\n{sequence}\n')
     return out_path
 
+def reverse_sequence(file_path):
+    """
+    Reverse sequences in a FASTA file.
+
+    Args:
+        file_path (str): Path to the input FASTA file.
+
+    Returns:
+        str: Path to the output FASTA file with reversed sequences.
+    """
+    sequences = fasta_read(file_path)
+    records = []
+
+    for name, seq in sequences.items():
+        seq = seq.upper()
+        seq = seq[::-1]
+        records.append({"Name": name, "Sequence": seq})
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for record in records:
+                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
+    return out_path
+
+def reverse_complement(file_path):
+    """
+    Reverse and complement sequences in a FASTA file.
+
+    Args:
+        file_path (str): Path to the input FASTA file.
+
+    Returns:
+        str: Path to the output FASTA file with reversed and complemented sequences.
+    """
+    sequences = fasta_read(file_path)
+    records = []
+    for name, seq in sequences.items():
+        seq = seq.upper()
+        seq = seq[::-1]
+        seq = seq.translate(str.maketrans("ATCG", "TAGC"))
+        records.append({"Name": name, "Sequence": seq})
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for record in records:
+                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
+    return out_path
+
+def merge_multi_fasta(fasta_files):
+    """
+    Merge multiple FASTA files into a single FASTA file.
+
+    Args:
+        fasta_files (List[str]): List of paths to FASTA files.
+
+    Returns:
+        str: Path to the output FASTA file containing merged sequences.
+    """
+    records = []
+    for fasta_file in fasta_files:
+        sequences = fasta_read3(fasta_file)
+        for name, seq in sequences.items():
+            records.append({"Name": name, "Sequence": seq})
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as outfile:
+        out_path = outfile.name
+        with open(out_path, 'w') as f:
+            for record in records:
+                f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
+    return out_path
+
 def main():
     """
     Main function to run the Streamlit app for sequence pretreatment.
@@ -220,7 +294,10 @@ def main():
                                                     "Handle duplicate IDs", 
                                                     "Process sequence characters", 
                                                     "Convert sequence case", 
-                                                    "Quality control"])
+                                                    "Quality control",
+                                                    "Reverse sequence",
+                                                    "Reverse and complement sequence",
+                                                    "Merge multiple FASTA files"])
 
     if selected_option == "Filtered by length":
         min_length = st.number_input("Min length", step=1)
@@ -258,6 +335,34 @@ def main():
         file_path = st.file_uploader("Upload a Fasta file", type=["fasta", "fas", "fa"])
         if file_path:
             process_and_download(file_path, lambda x: quality_control(x, qc_percentage), "quality_controlled_sequences.fasta")
+    
+    elif selected_option == "Reverse sequence":
+        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
+        if file_path:
+            process_and_download(file_path, lambda x: reverse_sequence(x), "reversed_sequences.fasta")
+    
+    elif selected_option == "Reverse and complement sequence":
+        file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
+        if file_path:
+            process_and_download(file_path, lambda x: reverse_complement(x), "reversed_and_complemented_sequences.fasta")
+
+    elif selected_option == "Merge multiple FASTA files":
+        fasta_files = st.file_uploader("Upload multiple FASTA files", type=["fasta", "fas", "fa"], accept_multiple_files=True)
+        if fasta_files:
+            if st.button("Run"):
+                out_file_path = merge_multi_fasta(fasta_files)
+                st.success("File processed successfully!")
+                with open(out_file_path, "r") as f:
+                    processed_content = f.read()
+                st.download_button(
+                    label="Download Output",
+                    data=processed_content,
+                    file_name="merged.fasta",
+                    mime="text/x-fasta"
+                )
+                os.remove(out_file_path)
+    
+
 
 if __name__ == "__main__":
     main()

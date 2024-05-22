@@ -48,6 +48,22 @@ def fasta_read2(file_path):
             sequences.append(current_sequence)
     return names, sequences
 
+def fasta_read3(file):
+    """
+    multiple sequence files
+    """
+    sequences = {}
+    with file as f:
+        for line in f:
+            line = line.decode().strip()  # 对于BytesIO对象，需要解码为字符串
+            if line.startswith('>'):
+                current_sequence = line[1:]
+                sequences[current_sequence] = ''
+            else:
+                sequences[current_sequence] += line
+    return sequences
+
+
 def delete_folder_contents(folder_path):
     try:
         # 遍历文件夹中的所有内容
@@ -187,4 +203,3 @@ def process_and_download2(file_path, info_path, process_function, output_filenam
                 file_name=output_filename,  # Use the defined output filename here
                 mime="application/octet-stream"
             )
-
