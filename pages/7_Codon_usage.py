@@ -1,11 +1,9 @@
-import os
 import io
 import streamlit as st
 import pandas as pd
-from collections import Counter
-from enum import Enum
 import tempfile
 from collections import defaultdict
+import numpy as np
 
 from utils import fasta_read2
 
@@ -62,6 +60,7 @@ def analyze_codon_sequence(sequence):
     GC12_ratio = (GC1_ratio + GC2_ratio) / 2
     A3_AU3 = A3_ratio / AU3_ratio if AU3_ratio != 0 else 0
     G3_GC3 = G3_ratio / GC3_ratio if GC3_ratio != 0 else 0
+
     
     return {
         "Sequence length": sequence_length,
@@ -108,42 +107,41 @@ def base_compsition(file_path):
         "Sequence length",
         'Effective nucleotide quantity',
         'Effective codon quantity',
-        'A_ratio',
-        'U_ratio',
-        'C_ratio',
-        'G_ratio',
-        'AU_ratio',
-        'GC_ratio',
-        'A1_ratio',
-        'U1_ratio',
-        'C1_ratio',
-        'G1_ratio',
-        'A2_ratio',
-        'U2_ratio',
-        'C2_ratio',
-        'G2_ratio',
-        'A3_ratio',
-        'U3_ratio',
-        'C3_ratio',
-        'G3_ratio',
-        'AU1_ratio',
-        'GC1_ratio',
-        'AU2_ratio',
-        'GC2_ratio',
-        'AU3_ratio',
-        'GC3_ratio',
-        'AU12_ratio',
-        'GC12_ratio',
-        'A3_AU3',
-        'G3_GC3'
+        'A',
+        'U',
+        'C',
+        'G',
+        'AU',
+        'GC',
+        'A1',
+        'U1',
+        'C1',
+        'G1',
+        'A2',
+        'U2',
+        'C2',
+        'G2',
+        'A3',
+        'U3',
+        'C3',
+        'G3',
+        'AU1',
+        'GC1',
+        'AU2',
+        'GC2',
+        'AU3',
+        'GC3',
+        'AU12',
+        'GC12',
+        'A3/AU3',
+        'G3/GC3'
     ])
     
     return df
 
 
-
 # 定义同义密码子表
-codon_table = {
+codon_table1 = {
     'F': ['UUU', 'UUC'],
     'L': ['UUA', 'UUG', 'CUU', 'CUC', 'CUA', 'CUG'],
     'I': ['AUU', 'AUC', 'AUA'],
@@ -177,7 +175,7 @@ def calculate_rscu(sequence):
     for i in range(0, len(sequence), 3):
         codon = sequence[i:i+3]
         if len(codon) == 3:
-            for aa, codons in codon_table.items():
+            for aa, codons in codon_table1.items():
                 if codon in codons:
                     codon_count[codon] += 1
                     aa_codon_count[aa][codon] += 1
@@ -187,7 +185,7 @@ def calculate_rscu(sequence):
     rscu_values = defaultdict(float)
     for aa, codons in aa_codon_count.items():
         total_count = sum(codons.values())
-        num_codons = len(codon_table[aa])
+        num_codons = len(codon_table1[aa])
         for codon, count in codons.items():
             if total_count > 0:
                 rscu_values[codon] = (count * num_codons) / total_count
