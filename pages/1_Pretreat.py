@@ -8,7 +8,7 @@ import tempfile
 from collections import defaultdict
 
 # 导入要用于处理的函数
-from utils import fasta_read, fasta_read2, fasta_read3, process_and_download, process_and_download2, get_column_names
+from utils import fasta_read, fasta_read2, fasta_read3, fasta_read4, process_and_download, process_and_download2, get_column_names
 
 def seq_length(file_path, min_length, max_length):
     """
@@ -283,6 +283,35 @@ def merge_multi_fasta(fasta_files):
                 f.write(f'>{record["Name"]}\n{record["Sequence"]}\n')
     return out_path
 
+def concatenate_sequences(fasta_files, excel_file, selected_column):
+    # 读取Excel文件获取排序
+    df = pd.read_excel(excel_file)
+    file_order = df[selected_column].tolist()
+
+    # 临时保存所有序列
+    sequence_dict = defaultdict(str)
+
+    # 按顺序读取Fasta文件，并进行合并
+    # for fasta_file in fasta_files:
+    #     file_name = fasta_file.name
+    #     if file_name in file_order:
+    #         sequences = fasta_read4(fasta_file)
+    #         for header, seq in sequences.items():
+    #             sequence_dict[header] += seq
+    
+    for file_name in file_order:
+        for fasta_file in fasta_files:
+            if file_name == fasta_file.name:
+                sequences = fasta_read4(fasta_file)
+                for header, seq in sequences.items():
+                    sequence_dict[header] += seq
+
+    # 将合并后的序列写入临时文件
+    with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix=".fasta") as tmp_file:
+        for header, seq in sequence_dict.items():
+            tmp_file.write(f'{header}\n{seq}\n')
+        return tmp_file.name
+
 def main():
     """
     Main function to run the Streamlit app for sequence pretreatment.
@@ -297,7 +326,8 @@ def main():
                                                     "Quality control",
                                                     "Reverse sequence",
                                                     "Reverse and complement sequence",
-                                                    "Merge multiple FASTA files"])
+                                                    "Merge multiple FASTA files",
+                                                    "Concatenate multiple FASTA files"])
 
     if selected_option == "Filtered by length":
         min_length = st.number_input("Min length", step=1)
@@ -362,7 +392,22 @@ def main():
                 )
                 os.remove(out_file_path)
     
+    elif selected_option == "Concatenate multiple FASTA files":
+        fasta_files = st.file_uploader("Upload multiple FASTA files", type=["fasta", "fas"], accept_multiple_files=True)
+        excel_file = st.file_uploader("Upload Excel file with order", type=["xlsx"])
 
+        if excel_file:
+            df = pd.read_excel(excel_file)
+            column_names = df.columns.tolist()
+            selected_column = st.selectbox("Select the column for file order", column_names)
+
+        if fasta_files and excel_file and st.button("Concatenate"):
+            out_file_path = concatenate_sequences(fasta_files, excel_file, selected_column)
+            with open(out_file_path, "r") as f:
+                processed_content = f.read()
+            st.download_button("Download concatenated sequences", processed_content, file_name="concatenated_sequences.fasta")
+            os.remove(out_file_path)
+    
 
 if __name__ == "__main__":
     main()

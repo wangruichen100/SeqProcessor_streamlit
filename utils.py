@@ -6,6 +6,7 @@ import pandas as pd
 from Bio.Seq import Seq
 import matplotlib.cm as cm
 from matplotlib.colors import ListedColormap
+from collections import defaultdict
 
 def fasta_read(file_path):
     sequences = {}
@@ -63,6 +64,23 @@ def fasta_read3(file):
                 sequences[current_sequence] += line
     return sequences
 
+def fasta_read4(file_obj):
+    sequences = {}
+    header = None
+    seq = []
+    # Read lines from file object, decode from bytes to string
+    for line_bytes in file_obj:
+        line = line_bytes.decode('utf-8')  # Decoding bytes to a string
+        if line.startswith('>'):
+            if header:
+                sequences[header] = ''.join(seq)
+            header = line.strip()
+            seq = []
+        else:
+            seq.append(line.strip())
+    if header:
+        sequences[header] = ''.join(seq)
+    return sequences
 
 def delete_folder_contents(folder_path):
     try:

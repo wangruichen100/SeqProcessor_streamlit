@@ -21,7 +21,7 @@ def extract_sequence(file_path, info_path):
         str: Path to the output FASTA file containing extracted sequences.
     """
     sequences = fasta_read(file_path)
-    df_info = pd.read_csv(info_path)
+    df_info = pd.read_excel(info_path)
     require_id = df_info.iloc[:, 0].to_list()
 
     records = []
@@ -186,7 +186,7 @@ def main():
     
     if selected_option == "Extract sequence by id":
         file_path = st.file_uploader("Upload a FASTA file", type=["fasta", "fas", "fa"])
-        info_path = st.file_uploader("Upload an Info file", type=["csv", "table", "txt", "xlsx"])
+        info_path = st.file_uploader("Upload an Info file", type=["xlsx"])
         
         if file_path and info_path:
             if st.button("Run"):
