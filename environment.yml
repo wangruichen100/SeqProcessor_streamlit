@@ -91,7 +91,7 @@ dependencies:
   - openssl=3.0.13=h7f8727e_1
   - orc=1.7.4=hb3bc3d3_1
   - packaging=23.2=py312h06a4308_0
-  - pandas=2.2.1=py312h526ad5a_0
+  - pandas
   - pillow=10.3.0=py312h5eee18b_0
   - pip=23.3.1=py312h06a4308_0
   - protobuf=3.20.3=py312h6a678d5_0
