@@ -127,6 +127,8 @@ def group_aamutation(file_path, info_path, id_column, type_column, picture_type)
         freq_df_all += freq_df
         group_all += group
 
+    site_all = [x + 1 for x in site_all]
+
     df = pd.DataFrame({
         "site": site_all,
         "aa": aa_all,
@@ -227,6 +229,8 @@ def group_ntmutation(file_path, info_path, id_column, type_column, picture_type)
         stat_df_all += stat_df
         freq_df_all += freq_df
         group_all += group
+
+    site_all = [x + 1 for x in site_all]
 
     df = pd.DataFrame({
         "site": site_all,
