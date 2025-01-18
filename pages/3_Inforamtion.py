@@ -20,7 +20,7 @@ def process_genebank_record(record):
         "organism": feature.qualifiers.get("organism", ["no"])[0] if feature else "no",
         "strain": feature.qualifiers.get("strain", ["no"])[0] if feature else "no",
         "isolate": feature.qualifiers.get("isolate", ["no"])[0] if feature else "no",
-        "country": feature.qualifiers.get("country", ["no"])[0] if feature else "no",
+        "country": feature.qualifiers.get("geo_loc_name", ["no"])[0] if feature else "no",
         "host": feature.qualifiers.get("host", ["no"])[0] if feature else "no",
         "date": feature.qualifiers.get("collection_date", ["no"])[0] if feature else "no",
         "note": feature.qualifiers.get("note", ["no"])[0] if feature else "no",
